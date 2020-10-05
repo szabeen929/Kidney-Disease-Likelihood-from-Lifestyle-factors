@@ -1,0 +1,188 @@
+---
+title: "ANLY 512-Lab1"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    source: embed
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+#Intro text {.sidebar}
+
+Summary: We can see that Johnson & Johnson is performing better in most key indicators except Price/Earning ratio while Novartis finishing a close second. Although the candlecharts indicate upward trend for Merck and Novartis as well, the Market Capitalization for J&J is significantly higher than the rest (almost twice as much). Hence I would recommend investing in J&J among these 4 stocks as it has the highest potential for short term gain
+
+```{r}
+```
+# Performance Analysis of Four Pharma Stocks
+
+Column 1 {data-width=250}
+-----------------------------------------------------------------------
+
+### Price Movement for Merck
+
+
+```{r}
+
+
+merck<-read.csv("C:/Users/admin/Documents/HarrisburgU/ANLY 512/MRK.csv")
+merck.subset<-merck[,-7]
+
+merck<-na.omit(merck)
+library(xts)
+library(magrittr)
+library(dygraphs)
+merck.new<-as.matrix(merck.subset)
+merck.xts <- xts(merck.new[,-1], order.by=as.Date(merck.new[,1]))
+m1 <- tail(merck.xts, n = 32)
+dygraph(m1) %>%
+  dyCandlestick()
+
+```
+
+
+### Price Movement for Pfizer
+
+```{r}
+#plot it for pfizer
+pfizer<-read.csv("C:/Users/admin/Documents/HarrisburgU/ANLY 512/PFE.csv")
+library(dplyr)
+library(xts)
+pfizer.subset<-pfizer[,-7]
+pfizer.new<-as.matrix(pfizer.subset)
+pfizer.xts <- xts(pfizer.new[,-1], order.by=as.Date(pfizer.new[,1]))
+
+library(tidyverse)
+library(dygraphs)
+
+
+m2 <- tail(pfizer.xts, n = 32)
+dygraph(m2) %>%
+  dyCandlestick()
+
+```
+
+Column 2 {data-width=250}
+-----------------------------------------------------------------------
+
+### Price Movement for J&J
+```{r}
+
+#plot for Johnson & Johnson
+
+jnj<-read.csv("C:/Users/admin/Documents/HarrisburgU/ANLY 512/JNJ.csv")
+library(dplyr)
+library(xts)
+jnj.subset<-jnj[,-7]
+jnj.new<-as.matrix(jnj.subset)
+jnj.xts <- xts(jnj.new[,-1], order.by=as.Date(jnj.new[,1]))
+
+m3 <- tail(jnj.xts, n = 32)
+dygraph(m3) %>%
+  dyCandlestick()
+```
+
+### Price Movement for Novartis
+
+```{r}
+#plot for novartis
+
+nvs<-read.csv("C:/Users/admin/Documents/HarrisburgU/ANLY 512/NVS.cSV")
+library(dplyr)
+library(xts)
+nvs.subset<-nvs[,-7]
+nvs.new<-as.matrix(nvs.subset)
+nvs.xts <- xts(nvs.new[,-1], order.by=as.Date(nvs.new[,1]))
+
+m4 <- tail(nvs.xts, n = 32)
+dygraph(m4) %>%
+  dyCandlestick()
+```
+
+
+Column 3{data-width=500}
+-----------------------------------------------------------------------
+
+### Key Indicators
+  
+  
+```{r}
+library(quantmod)
+library(plyr)
+what_metrics <- yahooQF(c("Price/Sales", 
+                          "P/E Ratio",
+                          "Price/EPS Estimate Next Year",
+                          "PEG Ratio",
+                          "Dividend/Share", 
+                          "Market Capitalization", "Moving Average", "Average Daily Volume", "EPS Forward"))
+
+tickers <- c("MRK", "PFE", "JNJ", "NVS")
+# Not all the metrics are returned by Yahoo.
+metrics <- getQuote(paste(tickers, sep="", collapse=";"), what=what_metrics)
+
+
+#Add tickers as the first column and remove the first column which had date stamps
+metrics <- data.frame(Symbol=tickers, metrics[,2:length(metrics)]) 
+
+metrics<-metrics[,-c(5,6)]
+
+
+#Change colnames
+colnames(metrics) <- c("Symbol", "P.E.Ratio", "P.by.EPS.Est", "Div.per.Share", "EPS.Forward")
+
+
+
+
+library(tidyr)
+metrics_long <- metrics %>%
+  pivot_longer(cols = -Symbol, 
+               names_to = "indicator", # name is a string!
+               values_to = "value")     # also a string
+library(ggplot2)
+library(ggthemes)
+
+ggplot(metrics_long)+
+  geom_col(aes(x=Symbol, y=value))+
+  facet_wrap(~indicator)+
+  ggtitle("Comparison of KPIs")+
+  aes(fill=indicator)+
+  theme_wsj()+
+  theme(legend.position = "bottom")+
+  scale_fill_manual(values=c("orange", "blue", "turquoise", "purple"), guide=guide_legend(title = "Indicator", nrow = 2))+
+  theme(legend.position = "bottom")
+  
+
+```
+
+### Other Key Indicators
+
+
+```{r, results='asis'}
+
+library(quantmod)
+library(plyr)
+what_metrics <- yahooQF(c("Volume", "Days High",
+                          "Market Capitalization", "Average Daily Volume"))
+
+tickers <- c("MRK", "PFE", "JNJ", "NVS")
+# Not all the metrics are returned by Yahoo.
+other.metrics <- getQuote(paste(tickers, sep="", collapse=";"), what=what_metrics)
+
+
+#Add tickers as the first column and remove the first column which had date stamps
+other.metrics <- data.frame(Symbol=tickers, other.metrics[,2:length(other.metrics)]) 
+
+#Change colnames
+colnames(other.metrics) <- c("Symbol", "Vol", "Days High", "Market.Cap", "Avg.Daily.Vol")
+
+
+library(kableExtra)
+
+other.metrics %>%
+  kbl() %>%
+  kable_paper(full_width = F) %>%
+  column_spec(5, color = "white",
+              background = spec_color(other.metrics$Market.Cap, end = 0.7))
+```
